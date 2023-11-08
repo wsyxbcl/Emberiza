@@ -1,12 +1,16 @@
-import pathlib
+from pathlib import Path
 
 import polars as pl
 
 
 if __name__ == '__main__':
+    LATITUDE_PLACEHOLDER = 0
+    LONGITUDE_PLACEHOLDER = 0
+
     #TODO Batch trap_info converting
-    trap_info_path = pathlib.Path("")
-    trap_info_raw = pl.read_csv(trap_info_path.joinpath(""),
+    filename = Path("YunTa201901.csv")
+    trap_info_path = Path("/mnt/data/Yunta-Axia_revised_raw/trap_info_raw")
+    trap_info_raw = pl.read_csv(trap_info_path.joinpath(filename),
         encoding='GBK',
         skip_rows=1)
     trap_info_cleaned = trap_info_raw.select(
@@ -24,7 +28,7 @@ if __name__ == '__main__':
             .dt.replace_time_zone(time_zone="Asia/Shanghai")
             .dt.to_string("%Y-%m-%dT%H:%M:%S%:z"))
 
-    trap_info_tags = trap_info_cleaned.with_columns(
+    trap_info_tags = trap_info_cleaned.with_columns( 
         # 
         pl.when(pl.col("latitude").is_not_null())
             .then(pl.lit("coordinate:GPS"))
@@ -42,9 +46,10 @@ if __name__ == '__main__':
     )
     # print(trap_info_tags)
 
+    # Patch location
     trap_info_patch = trap_info_tags.with_columns(
-        pl.col("latitude").fill_null(pl.lit(33.6)), 
-        pl.col("longitude").fill_null(pl.lit(96.4))
+        pl.col("latitude").fill_null(pl.lit(LATITUDE_PLACEHOLDER)), 
+        pl.col("longitude").fill_null(pl.lit(LONGITUDE_PLACEHOLDER)),
     )
     # print(trap_info_patch)
 
@@ -61,9 +66,14 @@ if __name__ == '__main__':
             [
                 pl.col("coordinateSource"),
                 pl.col("exifIssue"),
-            ],
-            separator=" | "
-        ).alias("deploymentTags")
+            ], separator=" | ")
+            .alias("deploymentTags"),
+        pl.concat_str(
+            [
+                pl.col("latitude"),
+                pl.col("longitude")
+            ], separator="/")
+            .alias("locationID")
     )
     print(deployments)
-    
+    deployments.write_csv(Path("./").joinpath(filename.stem+'_deployments.csv'))
