@@ -1,4 +1,3 @@
-import glob
 from pathlib import Path
 
 import polars as pl
@@ -9,10 +8,10 @@ if __name__ == '__main__':
     LONGITUDE_PLACEHOLDER = 0
     BATCH = 1
 
-    filename = Path("YunTa201901.csv")
-    trap_info_path = Path("test")
+    filename = Path("")
+    trap_info_path = Path("/mnt/data/Yunta-Axia_revised_raw/Yunta")
     if BATCH:
-        trap_infos = glob.glob('./test/*.csv')
+        trap_infos = trap_info_path.glob('*/YunTa2020*.csv')
         trap_info_raw = pl.concat(
             [
                 pl.read_csv(f, 
@@ -75,8 +74,8 @@ if __name__ == '__main__':
     deployments = trap_info_patch.select(
         #TODO just a temporary fix for Yunta
         pl.concat_str([
-            pl.col("collectionName"),
-            pl.col("deploymentID")
+            pl.col("deploymentID"),
+            pl.col("collectionName")
         ], separator='_').alias("deploymentID"), 
 
         pl.col("latitude",
