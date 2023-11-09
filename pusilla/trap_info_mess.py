@@ -1,3 +1,4 @@
+import glob
 from pathlib import Path
 
 import polars as pl
@@ -6,13 +7,30 @@ import polars as pl
 if __name__ == '__main__':
     LATITUDE_PLACEHOLDER = 0
     LONGITUDE_PLACEHOLDER = 0
+    BATCH = 1
 
-    #TODO Batch trap_info converting
     filename = Path("YunTa201901.csv")
-    trap_info_path = Path("/mnt/data/Yunta-Axia_revised_raw/trap_info_raw")
-    trap_info_raw = pl.read_csv(trap_info_path.joinpath(filename),
-        encoding='GBK',
-        skip_rows=1)
+    trap_info_path = Path("test")
+    if BATCH:
+        trap_infos = glob.glob('./test/*.csv')
+        trap_info_raw = pl.concat(
+            [
+                pl.read_csv(f, 
+                    encoding='GBK', 
+                    skip_rows=1, 
+                    dtypes={"deploymentID": pl.Utf8,
+                        "timestampProblem": pl.Boolean,
+                        "coordinateUncertainty": pl.Utf8,})
+                        .with_columns(pl.lit(Path(f).stem).alias("collectionName")) #TODO just a temporary fix for Yunta
+                for f in trap_infos
+            ],
+            how="diagonal"
+        )
+    else:
+        trap_info_raw = pl.read_csv(trap_info_path.joinpath(filename),
+            encoding='GBK',
+            skip_rows=1)
+
     trap_info_cleaned = trap_info_raw.select(
         pl.col("deploymentID",
             "latitude",
@@ -21,7 +39,8 @@ if __name__ == '__main__':
             "cameraModel",
             "exifTimeProblem",
             "timestampProblem",
-            "deploymentComments"),
+            "deploymentComments",
+            "collectionName"),
         # ISO 8601 / RFC 3339 date & time format
         pl.col("deploymentStart", "deploymentEnd")
             .str.to_datetime()
@@ -54,26 +73,33 @@ if __name__ == '__main__':
     # print(trap_info_patch)
 
     deployments = trap_info_patch.select(
-        pl.col("deploymentID",
-            "latitude",
+        #TODO just a temporary fix for Yunta
+        pl.concat_str([
+            pl.col("collectionName"),
+            pl.col("deploymentID")
+        ], separator='_').alias("deploymentID"), 
+
+        pl.col("latitude",
             "longitude",
             "deploymentStart",
             "deploymentEnd",
             "setupBy",
             "cameraModel",
             "deploymentComments"),
-        pl.concat_str(
-            [
-                pl.col("coordinateSource"),
-                pl.col("exifIssue"),
-            ], separator=" | ")
+            
+        pl.concat_str([
+            pl.col("coordinateSource"),
+            pl.col("exifIssue"),
+        ], separator=" | ")
             .alias("deploymentTags"),
-        pl.concat_str(
-            [
-                pl.col("latitude"),
-                pl.col("longitude")
-            ], separator="/")
-            .alias("locationID")
+        pl.concat_str([
+            pl.col("latitude"),
+            pl.col("longitude")
+        ], separator="/")
+            .alias("locationID"),
     )
     print(deployments)
-    deployments.write_csv(Path("./").joinpath(filename.stem+'_deployments.csv'))
+    if BATCH:
+        deployments.write_csv(trap_info_path.joinpath('deployments.csv'))
+    else:
+        deployments.write_csv(Path("./").joinpath(filename.stem+'_deployments.csv'))
