@@ -11,7 +11,7 @@ if __name__ == '__main__':
     filename = Path("")
     trap_info_path = Path("/mnt/data/Yunta-Axia_revised_raw/Yunta")
     if BATCH:
-        trap_infos = trap_info_path.glob('*/YunTa2020*.csv')
+        trap_infos = trap_info_path.glob('*/YunTa*.csv')
         trap_info_raw = pl.concat(
             [
                 pl.read_csv(f, 
@@ -20,7 +20,7 @@ if __name__ == '__main__':
                     dtypes={"deploymentID": pl.Utf8,
                         "timestampProblem": pl.Boolean,
                         "coordinateUncertainty": pl.Utf8,})
-                        .with_columns(pl.lit(Path(f).stem).alias("collectionName")) #TODO just a temporary fix for Yunta
+                        .with_columns(pl.lit(Path(f).parent.name).alias("collectionName")) #TODO just a temporary fix for Yunta
                 for f in trap_infos
             ],
             how="diagonal"
@@ -30,7 +30,10 @@ if __name__ == '__main__':
             encoding='GBK',
             skip_rows=1)
 
-    trap_info_cleaned = trap_info_raw.select(
+    # Drop nulls (for some reason there're empty rows in csv)
+    #TODO just a temporary fix for Yunta, will move to deploymentName
+    trap_info_cleaned = trap_info_raw.filter(~pl.all_horizontal(pl.col("deploymentID").is_null())) 
+    trap_info_cleaned = trap_info_cleaned.select(
         pl.col("deploymentID",
             "latitude",
             "longitude",
@@ -100,5 +103,6 @@ if __name__ == '__main__':
     print(deployments)
     if BATCH:
         deployments.write_csv(trap_info_path.joinpath('deployments.csv'))
+        print("deployment table saved as: ", trap_info_path.joinpath('deployments.csv'))
     else:
         deployments.write_csv(Path("./").joinpath(filename.stem+'_deployments.csv'))
