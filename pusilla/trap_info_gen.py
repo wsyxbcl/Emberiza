@@ -1,23 +1,59 @@
+import argparse
 from datetime import date, time
+import os
 import csv
 
 import xlsxwriter
 
-workbook = xlsxwriter.Workbook("../test/trap_info_template.xlsx")
-worksheet = workbook.add_worksheet()
+parser = argparse.ArgumentParser()
+parser.add_argument('project_dir')
+args = parser.parse_args()
 
-# Add a format for the header cells.
+collection_list = next(os.walk(args.project_dir))[1]
 
-# Set up layout of the worksheet.
-worksheet.set_column("A:A", 68)
-worksheet.set_column("B:B", 15)
-worksheet.set_column("D:D", 15)
-worksheet.set_row(0, 36)
+for collection in collection_list:
+    collection_dir = os.path.join(args.project_dir, collection)
+    workbook = xlsxwriter.Workbook(os.path.join(collection_dir, "trap_info.xlsx"))
+    worksheet = workbook.add_worksheet()
+    print("Opening "+collection_dir+" as collection")
+    for (deployment_idx, deployment) in enumerate(next(os.walk(collection_dir))[1]):
+        print("\tAdding "+deployment)
+        col_idx = {}
+        with open("./trap_info_header.csv", encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            for heading_idx, heading in enumerate(reader):
+                index = xlsxwriter.utility.xl_col_to_name(heading_idx)
+                worksheet.write(index+'1', heading[0])
+                worksheet.write(index+'2', heading[1])
+                worksheet.set_column(index+":"+index, 20) # Set up layout of the worksheet.
+                col_idx[heading[1]] = index
 
-with open("./trap_info_header.csv") as csvfile:
-    reader = csv.reader(csvfile)
-    for i, heading in enumerate(reader):
-        worksheet.write(xlsxwriter.utility.xl_col_to_name(i)+"1", heading[0])
-        worksheet.write(xlsxwriter.utility.xl_col_to_name(i)+"2", heading[1])
-
-workbook.close()
+        row_idx = str(deployment_idx + 3)
+        # Deployment_names
+        worksheet.write('A'+row_idx, deployment)
+        # Drop-down lists
+        worksheet.data_validation(
+            col_idx["locationSource"]+row_idx, 
+            {"validate": "list", "source": ["估计GPS", "精确GPS"]}
+        )
+        worksheet.data_validation(
+            col_idx["timestampProblem"]+row_idx, 
+            {"validate": "list", "source": ["有问题", "无问题", "有问题但已精确校正"]}
+        )
+        worksheet.data_validation(
+            col_idx["exifTimeProblem1Revised"]+row_idx, 
+            {"validate": "list", "source": ["已校正", "未校正"]}
+        )
+        worksheet.data_validation(
+            col_idx["exifTimeProblem2Revised"]+row_idx, 
+            {"validate": "list", "source": ["已校正", "未校正"]}
+        )
+        worksheet.data_validation(
+            col_idx["otherProblem1"]+row_idx, 
+            {"validate": "list", "source": ["照片损坏", "未有效工作", "相机位置移动", "其它(在备注中注明)"]}
+        )
+        worksheet.data_validation(
+            col_idx["otherProblem2"]+row_idx, 
+            {"validate": "list", "source": ["照片损坏", "未有效工作", "相机位置移动", "其它(在备注中注明)"]}
+        )
+    workbook.close()
