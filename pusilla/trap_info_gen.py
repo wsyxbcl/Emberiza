@@ -13,10 +13,15 @@ collection_list = next(os.walk(args.project_dir))[1]
 
 for collection in collection_list:
     collection_dir = os.path.join(args.project_dir, collection)
-    workbook = xlsxwriter.Workbook(os.path.join(collection_dir, "trap_info.xlsx"))
+    workbook = xlsxwriter.Workbook(os.path.join(collection_dir, "trap_info_template.xlsx"))
     worksheet = workbook.add_worksheet()
     print("Opening "+collection_dir+" as collection")
+    num_dir_ignored = 0
     for (deployment_idx, deployment) in enumerate(next(os.walk(collection_dir))[1]):
+        if "精选" in deployment or deployment == ".dtrash":
+            print("\tSkipping "+deployment)
+            num_dir_ignored += 1
+            continue
         print("\tAdding "+deployment)
         col_idx = {}
         with open("./trap_info_header.csv", encoding='utf-8') as csvfile:
@@ -28,7 +33,7 @@ for collection in collection_list:
                 worksheet.set_column(index+":"+index, 20) # Set up layout of the worksheet.
                 col_idx[heading[1]] = index
 
-        row_idx = str(deployment_idx + 3)
+        row_idx = str(deployment_idx - num_dir_ignored + 3)
         # Deployment_names
         worksheet.write('A'+row_idx, deployment)
         # Drop-down lists
