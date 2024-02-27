@@ -51,7 +51,6 @@ if __name__ == '__main__':
         pl.col("数量"),
         pl.col("行为"),
         pl.col("相机编号")])
-    print(uov_data)
 
     # Output (serval compatible csv file)
     output_dir = csv_dir.joinpath("result")
