@@ -63,7 +63,7 @@ if __name__ == '__main__':
     # Temporal independence analysis
     df_cleaned = (
         uov_data.lazy().with_columns([
-            pl.col("path").alias("deployment"),
+            pl.col("path").str.split(os.sep).list.get(1).alias("deployment"),
             pl.col("datetime_original").alias("time")])
         .drop_nulls(["species", "time", "deployment"])
         .unique(subset=["deployment", "time", "species"], maintain_order=True).collect()
