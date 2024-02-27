@@ -34,7 +34,12 @@ if __name__ == '__main__':
         pl.col("path"),
         pl.col("照片名").alias("filename"),
         pl.col("物种名称").alias("species"),
-        pl.col("时间").str.strptime(pl.Datetime).alias("datetime_original")])
+        pl.col("时间").str.strptime(pl.Datetime).alias("datetime_original"),
+        pl.col("数量"),
+        pl.col("行为"),
+        pl.col("相机编号")
+        ])
+    print(uov_data)
     # Create output directory and write to csv
     output_dir = csv_dir.joinpath("result")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -46,12 +51,9 @@ if __name__ == '__main__':
             f_out.write(f.read())
             
     # Temporal independence analysis
-    df_cleaned = uov_data.lazy().select([
+    df_cleaned = uov_data.lazy().with_columns([
         pl.col("path").alias("deployment"),
-        pl.col("datetime_original").alias("time"),
-        pl.col("filename"),
-        pl.col("species")]).drop_nulls().unique(subset=["deployment", "time", "species"], maintain_order=True).collect()
-    df_cleaned.write_csv(output_dir.joinpath("cleaned.csv"))
+        pl.col("datetime_original").alias("time")]).drop_nulls(["species", "time", "deployment"]).unique(subset=["deployment", "time", "species"], maintain_order=True).collect()
 
     df_sorted = df_cleaned.lazy().sort("time").sort("species").sort("deployment").collect()
     df_independent = df_sorted.rolling(
@@ -62,7 +64,11 @@ if __name__ == '__main__':
     ).agg([
         pl.count("species").alias("count"),
         pl.last("filename"),
+        pl.last("数量"),
+        pl.last("行为"),
+        pl.last("相机编号")
     ]).filter(
         pl.col("count") == 1
     )
-    df_independent.write_csv(output_dir.joinpath("independence.csv"))
+    print(df_independent)
+    df_independent.write_csv(output_dir.joinpath("独立捕获.csv"), datetime_format=r"%Y-%m-%d %H:%M:%S")
