@@ -7,6 +7,11 @@ import subprocess
 from pathlib import Path
 import polars as pl
 
+def utf8_to_gbk(input_path: Path, output_path: Path):
+    with open (input_path, 'r', encoding='utf-8') as f:
+        with open(output_path, 'w', encoding='GBK') as f_out:
+            f_out.write(f.read())
+
 if __name__ == '__main__':
     # # Check serval
     # script_path = Path(os.path.realpath(__file__)).parent
@@ -18,8 +23,16 @@ if __name__ == '__main__':
     #     raise FileNotFoundError("serval not found")
 
     # Traverse the directory and read all csv files
-    csv_dir = Path(sys.argv[1])
+    try:
+        csv_dir = Path(sys.argv[1])
+    except IndexError:
+        csv_dir = input("Please input the directory of UOV csv files: ")
+        csv_dir = Path(csv_dir)
+
     uov_dfs = [pl.read_csv(f, encoding='GBK') for f in csv_dir.glob("*.csv")]
+    if not uov_dfs:
+        print("No csv file found in the directory")
+        sys.exit(1)
     uov_filenames = [Path(f).stem for f in csv_dir.glob("*.csv")]
 
     # Concatinate
@@ -37,24 +50,25 @@ if __name__ == '__main__':
         pl.col("时间").str.strptime(pl.Datetime).alias("datetime_original"),
         pl.col("数量"),
         pl.col("行为"),
-        pl.col("相机编号")
-        ])
+        pl.col("相机编号")])
     print(uov_data)
-    # Create output directory and write to csv
+
+    # Output (serval compatible csv file)
     output_dir = csv_dir.joinpath("result")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_csv_path = output_dir.joinpath("tags.csv")
     uov_data.write_csv(output_csv_path, datetime_format=r"%Y-%m-%d %H:%M:%S")
     # Encode to GBK
-    with open(output_csv_path, 'r', encoding='utf-8') as f:
-        with open(output_dir.joinpath("tags_gbk.csv"), 'w', encoding='GBK') as f_out:
-            f_out.write(f.read())
-            
-    # Temporal independence analysis
-    df_cleaned = uov_data.lazy().with_columns([
-        pl.col("path").alias("deployment"),
-        pl.col("datetime_original").alias("time")]).drop_nulls(["species", "time", "deployment"]).unique(subset=["deployment", "time", "species"], maintain_order=True).collect()
+    utf8_to_gbk(output_csv_path, output_dir.joinpath("tags_gbk.csv"))
 
+    # Temporal independence analysis
+    df_cleaned = (
+        uov_data.lazy().with_columns([
+            pl.col("path").alias("deployment"),
+            pl.col("datetime_original").alias("time")])
+        .drop_nulls(["species", "time", "deployment"])
+        .unique(subset=["deployment", "time", "species"], maintain_order=True).collect()
+    )
     df_sorted = df_cleaned.lazy().sort("time").sort("species").sort("deployment").collect()
     df_independent = df_sorted.rolling(
         index_column="time",
@@ -71,4 +85,26 @@ if __name__ == '__main__':
         pl.col("count") == 1
     )
     print(df_independent)
-    df_independent.write_csv(output_dir.joinpath("独立捕获.csv"), datetime_format=r"%Y-%m-%d %H:%M:%S")
+    indenpendent_csv_path = output_dir.joinpath("独立捕获.csv")
+    df_independent.write_csv(indenpendent_csv_path, datetime_format=r"%Y-%m-%d %H:%M:%S")
+    utf8_to_gbk(indenpendent_csv_path, output_dir.joinpath("独立捕获_gbk.csv"))
+    print("Saved to "+indenpendent_csv_path.as_posix())
+
+    # Count the number of independent captures
+    indenpendent_count_csv_path = output_dir.joinpath("独立捕获统计.csv")
+    df_independent_count = df_independent.groupby(["deployment", "species"], maintain_order=True).agg(
+        pl.count("species").alias("count"))
+    print(df_independent_count)
+    df_independent_count.write_csv(indenpendent_count_csv_path)
+    utf8_to_gbk(indenpendent_count_csv_path, output_dir.joinpath("独立捕获统计_gbk.csv"))
+    print("Saved to "+indenpendent_count_csv_path.as_posix())
+
+    # Clean up directory
+    os.remove(indenpendent_csv_path)
+    os.remove(indenpendent_count_csv_path)
+
+    # Freeze the terminal
+    if os.name == 'nt':
+        os.system("pause")
+    else:
+        os.system("read -n 1 -s -p \"Press any key to continue...\"")
