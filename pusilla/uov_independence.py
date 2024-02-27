@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     # Count the number of independent captures
     indenpendent_count_csv_path = output_dir.joinpath("独立捕获统计.csv")
-    df_independent_count = df_independent.groupby(["deployment", "species"], maintain_order=True).agg(
+    df_independent_count = df_independent.group_by(["deployment", "species"], maintain_order=True).agg(
         pl.count("species").alias("count"))
     print(df_independent_count)
     df_independent_count.write_csv(indenpendent_count_csv_path)
