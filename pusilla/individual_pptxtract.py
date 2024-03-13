@@ -3,6 +3,8 @@ from io import BytesIO
 from PIL import Image
 import os
 from scipy.spatial import KDTree
+from exiftool import ExifToolHelper
+import argparse
 
 SPECIES = "雪豹"
 
@@ -40,15 +42,15 @@ class Individual():
         self.appeared_location = appeared_location
     
     def get_description(self):
-        if self.first_capture_time:
-            first_capture_time = f"初次拍摄于{self.first_capture_time}"
-        if self.latest_capture_time:
-            latest_capture_time = f"最近拍摄于{self.latest_capture_time}"
+        first_capture_time = f"初次拍摄于{self.first_capture_time}" if self.first_capture_time else ""
+        latest_capture_time = f"最近捕获于{self.latest_capture_time}" if self.latest_capture_time else ""
+
         # make a list of all the attributes and drop the empty strings
         description = [self.species, self.name, self.name_label, first_capture_time, latest_capture_time, 
                        self.family_relationship, self.comment, self.appeared_location]
         description = [i for i in description if i]
-        return ";".join(description)
+        description_str = (";".join(description)).replace("\n", "")
+        return description_str
         
 class IndividualImage():
     def __init__(self, individual, body_part):
@@ -84,8 +86,7 @@ def get_image_name_label(image_position):
 #     _, idx = kdtree.query(text_position)
 #     return TEXT_COORDINATES[list(TEXT_COORDINATES.keys())[idx]]
 
-def extract_images_with_text_info_from_pptx(pptx_path, output_folder):
-    individual_image_list = []
+def extract_images_with_text_info_from_pptx(pptx_path, output_dir):
     prs = Presentation(pptx_path)
 
     for i, slide in enumerate(prs.slides):
@@ -104,6 +105,7 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_folder):
         if f"{SPECIES}名称/姓名标签" not in text_info:
             print(f"Slide {i} does not contain {SPECIES}名称/姓名标签")
             continue
+
         # initialize variables for the individual
         name = gender = first_capture_time = latest_capture_time = family_relationship = comment = appeared_location = None
         try:
@@ -126,29 +128,35 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_folder):
         individual = Individual(SPECIES, name, name_label, gender, first_capture_time, latest_capture_time, 
                                 family_relationship, comment, appeared_location)
         
-        image_list = []
+        # Extract images
         for j, shape in enumerate(slide.shapes):
             if hasattr(shape, "image"):
-                # image_stream = BytesIO(shape.image.blob)
-                # image = Image.open(image_stream)
+                image_stream = BytesIO(shape.image.blob)
+                image = Image.open(image_stream).convert("RGB")
 
-                # # Create a filename using the slide text
-                # slide_text = "_".join(info['text'] for info in text_info)
-                # slide_text = ''.join(c for c in slide_text if c.isalnum() or c in [' ', '_', '-']).rstrip()
-                
                 # Get the position of the image
                 image_position = (shape.left, shape.top)
                 image_individual = IndividualImage(individual, get_image_name_label(image_position))
-                image_list.append(image_individual)
-                # # Save the image with text and position information in the filename
-                # filename = f"{output_folder}/{slide_text}_image_{i}_{j}_at_{image_position}.png"
-                # filename = os.path.normpath(filename)  # Normalize path for different OS
-                # image.save(filename, format="PNG")
-                # print(f"Image {i}_{j} saved: {filename}")
-        individual_image_list.append(image_list)
-    return individual_image_list
+                
+                # Save the image and write info to metadata
+                individual_dir = os.path.join(output_dir, individual.name_label)
+                if not os.path.exists(individual_dir):
+                    os.makedirs(individual_dir)
+                image_path = os.path.join(individual_dir, f"{image_individual.subject}-{j}-{image_individual.body_part}.jpg")
+                image.save(image_path, format="JPEG", quality=80)
+                print(f"Saved {image_path}")
+                with ExifToolHelper() as et:
+                    et.execute(f"-Subject={image_individual.subject}", 
+                                " ".join([f"-Keywords={keyword}" for keyword in image_individual.keywords]),
+                                f"-Description={image_individual.description}",
+                                f"-Title={image_individual.title}",
+                                "-overwrite_original", 
+                                image_path)
 
-# Example usage
-pptx_file_path = "/home/wsyxbcl/Downloads/individual_demo_new.pptx"
-output_folder_path = "/home/wsyxbcl/code/emberiza/test"
-individual_list = extract_images_with_text_info_from_pptx(pptx_file_path, output_folder_path)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract individual info from a pptx file")
+    parser.add_argument("pptx_file_path", help="Path to the pptx file")
+    parser.add_argument("output_folder_path", help="Path to the output folder")
+    args = parser.parse_args()
+    extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path)
