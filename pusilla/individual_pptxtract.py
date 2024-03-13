@@ -112,6 +112,8 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir):
             name, name_label = text_info[f"{SPECIES}名称/姓名标签"].split("/")
         except ValueError:
             name_label = text_info[f"{SPECIES}名称/姓名标签"]
+            name_label = name_label.strip(" ")
+            name = "无"
         if "性别" in text_info:
             gender = text_info["性别"]
         if "初次拍摄年/月" in text_info:
