@@ -5,8 +5,10 @@ import os
 from scipy.spatial import KDTree
 from exiftool import ExifToolHelper
 import argparse
+import pandas as pd
 
 SPECIES = "雪豹"
+LOCATION = "昂赛"
 
 TEXT_COORDINATES = {
     (4704845, 136525): f"{SPECIES}名称/姓名标签",
@@ -53,16 +55,17 @@ class Individual():
         return description_str
         
 class IndividualImage():
-    def __init__(self, individual, body_part):
+    def __init__(self, individual, body_part, location):
         self.individual = individual
         self.body_part = body_part
+        self.location = location
 
     @property
     def title(self):
         if self.individual.name:
-            return f"{self.individual.name}-{self.individual.name_label}"
+            return f"{self.location}-{self.individual.name}-{self.individual.name_label}"
         else:
-            return self.individual.name_label
+            return f"{self.location}-{self.individual.name_label}"
 
     @property
     def subject(self):
@@ -81,25 +84,29 @@ def get_image_name_label(image_position):
     _, idx = kdtree.query(image_position)
     return IMG_COORDINATES[list(IMG_COORDINATES.keys())[idx]]
 
-# def get_text_info(text_position):
-#     kdtree = KDTree(list(TEXT_COORDINATES.keys()))
-#     _, idx = kdtree.query(text_position)
-#     return TEXT_COORDINATES[list(TEXT_COORDINATES.keys())[idx]]
+def get_text_info(text_position):
+    kdtree = KDTree(list(TEXT_COORDINATES.keys()))
+    _, idx = kdtree.query(text_position)
+    return TEXT_COORDINATES[list(TEXT_COORDINATES.keys())[idx]]
 
-def extract_images_with_text_info_from_pptx(pptx_path, output_dir):
+def extract_images_with_text_info_from_pptx(pptx_path, output_dir, info_mode=False):
     prs = Presentation(pptx_path)
-
+    individual_iist = []
+    image_list = []
     for i, slide in enumerate(prs.slides):
         # Get the text content and position of each shape on the slide
         text_info = {}
         for shape in slide.shapes:
             if hasattr(shape, "text"):
-                text_coordinate = (shape.left, shape.top)
-                try:
-                    text_info[TEXT_COORDINATES[text_coordinate]] = shape.text
-                except KeyError:
-                    if shape.text:
-                        print("Unknown TEXT_COORDINATES for {} in slide {}".format(shape.text, i))
+                if shape.text == "":
+                    continue
+                text_position = (shape.left, shape.top)
+                # try:
+                #     text_info[TEXT_COORDINATES[text_position]] = shape.text
+                # except KeyError:
+                #     if shape.text:
+                #         print("Unknown TEXT_COORDINATES for {} in slide {}".format(shape.text, i))
+                text_info[get_text_info(text_position)] = shape.text.replace("\n", "; ")
         print(text_info)
 
         if f"{SPECIES}名称/姓名标签" not in text_info:
@@ -113,9 +120,12 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir):
         except ValueError:
             name_label = text_info[f"{SPECIES}名称/姓名标签"]
             name_label = name_label.strip(" ")
-            name = "无"
         if "性别" in text_info:
             gender = text_info["性别"]
+            if gender in ["M", "公"]:
+                gender = "雄"
+            if gender in ["F", "母"]:
+                gender = "雌"
         if "初次拍摄年/月" in text_info:
             first_capture_time = text_info["初次拍摄年/月"]
         if "最近捕获年/月" in text_info:
@@ -129,36 +139,56 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir):
         
         individual = Individual(SPECIES, name, name_label, gender, first_capture_time, latest_capture_time, 
                                 family_relationship, comment, appeared_location)
-        
-        # Extract images
-        for j, shape in enumerate(slide.shapes):
-            if hasattr(shape, "image"):
-                image_stream = BytesIO(shape.image.blob)
-                image = Image.open(image_stream).convert("RGB")
+        if info_mode:
+            individual_iist.append(individual)
+        else: 
+        # Extract images      
+            for j, shape in enumerate(slide.shapes):
+                if hasattr(shape, "image"):
+                    image_stream = BytesIO(shape.image.blob)
+                    image = Image.open(image_stream).convert("RGB")
 
-                # Get the position of the image
-                image_position = (shape.left, shape.top)
-                image_individual = IndividualImage(individual, get_image_name_label(image_position))
-                
-                # Save the image and write info to metadata
-                individual_dir = os.path.join(output_dir, individual.name_label)
-                if not os.path.exists(individual_dir):
-                    os.makedirs(individual_dir)
-                image_path = os.path.join(individual_dir, f"{image_individual.subject}-{j}-{image_individual.body_part}.jpg")
-                image.save(image_path, format="JPEG", quality=80)
-                print(f"Saved {image_path}")
-                with ExifToolHelper() as et:
-                    et.execute(f"-Subject={image_individual.subject}", 
-                                " ".join([f"-Keywords={keyword}" for keyword in image_individual.keywords]),
-                                f"-Description={image_individual.description}",
-                                f"-Title={image_individual.title}",
-                                "-overwrite_original", 
-                                image_path)
+                    # Get the position of the image
+                    image_position = (shape.left, shape.top)
+                    image_individual = IndividualImage(individual, get_image_name_label(image_position), LOCATION)
+                    image_list.append(image_individual)
+                    # Save the image and write info to metadata
+                    # individual_dir = os.path.join(output_dir, individual.name_label)
+                    # if not os.path.exists(individual_dir):
+                    #     os.makedirs(individual_dir)
+                    if not os.path.exists(output_dir):
+                        os.makedirs(output_dir)
+                    image_path = os.path.join(output_dir, f"{image_individual.location}-{image_individual.subject}-{j}-{image_individual.body_part}.jpg")
+                    image.save(image_path, format="JPEG", quality=80)
+                    print(f"Saved {image_path}")
+                    with ExifToolHelper() as et:
+                        et.execute(f"-Subject={image_individual.subject}", 
+                                    " ".join([f"-Keywords={keyword}" for keyword in image_individual.keywords]),
+                                    f"-Description={image_individual.description}",
+                                    f"-Title={image_individual.title}",
+                                    "-overwrite_original", 
+                                    image_path)
 
+    if info_mode:
+        # write individual info to csv
+        individual_df = pd.DataFrame([i.__dict__ for i in individual_iist])
+        output_csv_path = os.path.join(output_dir, f"{LOCATION}-{SPECIES}-individuals.csv")
+        individual_df.to_csv(output_csv_path, index=False)
+    else:
+        # write image info to csv
+        individual_df = pd.DataFrame([i.individual.__dict__ for i in image_list])
+        image_df = pd.DataFrame([i.__dict__ for i in image_list])
+        df = pd.concat([individual_df, image_df], axis=1).drop(columns=["individual"])
+        output_csv_path = os.path.join(output_dir, f"{LOCATION}-{SPECIES}-images.csv")
+        df.to_csv(output_csv_path, index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract individual info from a pptx file")
     parser.add_argument("pptx_file_path", help="Path to the pptx file")
     parser.add_argument("output_folder_path", help="Path to the output folder")
+    parser.add_argument("--info", help="Just output the individual info", action="store_true")
     args = parser.parse_args()
-    extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path)
+    if args.csv:
+        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path, info_mode=True)
+    else:
+        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path)
