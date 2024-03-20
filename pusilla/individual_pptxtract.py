@@ -42,7 +42,11 @@ class Individual():
         self.family_relationship = family_relationship
         self.comment = comment
         self.appeared_location = appeared_location
-    
+        if "cub" in name_label.lower():
+            self.age = "cub"
+        else:
+            self.age = "adult"
+
     def get_description(self):
         first_capture_time = f"初次拍摄于{self.first_capture_time}" if self.first_capture_time else ""
         latest_capture_time = f"最近捕获于{self.latest_capture_time}" if self.latest_capture_time else ""
@@ -73,7 +77,7 @@ class IndividualImage():
 
     @property
     def keywords(self):
-        return [self.individual.species, self.individual.name, self.individual.name_label, self.body_part]
+        return [self.individual.species, self.individual.name, self.individual.name_label, self.individual.age, self.body_part]
 
     @property
     def description(self):
@@ -188,7 +192,7 @@ if __name__ == "__main__":
     parser.add_argument("output_folder_path", help="Path to the output folder")
     parser.add_argument("--info", help="Just output the individual info", action="store_true")
     args = parser.parse_args()
-    if args.csv:
+    if args.info:
         extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path, info_mode=True)
     else:
         extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path)
