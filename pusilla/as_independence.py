@@ -11,4 +11,4 @@ split_values = df["path"].str.split("\\", expand=True)
 df["path"] = '/' + split_values[5] + '/' + split_values[6] + '/dummy.jpg'
 
 # Save
-df.to_csv(output_csv_path, index=False)
+df.to_csv(output_csv_path, index=False, encoding="GBK")

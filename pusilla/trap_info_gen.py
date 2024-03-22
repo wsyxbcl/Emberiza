@@ -24,7 +24,7 @@ for collection in collection_list:
             continue
         print("\tAdding "+deployment)
         col_idx = {}
-        with open("./trap_info_header.csv", encoding='utf-8') as csvfile:
+        with open("./assets/trap_info_header.csv", encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
             for heading_idx, heading in enumerate(reader):
                 index = xlsxwriter.utility.xl_col_to_name(heading_idx)
