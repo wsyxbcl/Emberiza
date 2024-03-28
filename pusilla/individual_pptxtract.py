@@ -8,7 +8,6 @@ import argparse
 import pandas as pd
 
 SPECIES = "雪豹"
-LOCATION = "昂赛"
 
 TEXT_COORDINATES = {
     (4704845, 136525): f"{SPECIES}名称/姓名标签",
@@ -42,10 +41,16 @@ class Individual():
         self.family_relationship = family_relationship
         self.comment = comment
         self.appeared_location = appeared_location
+        self.age = "adult"
+
         if "cub" in name_label.lower():
             self.age = "cub"
-        else:
-            self.age = "adult"
+        elif family_relationship:
+            if "'s cub" in family_relationship.lower():
+                self.age = "cub"
+        elif comment:
+            if "'s cub" in family_comment.lower():
+                self.age = "cub"
 
     def get_description(self):
         first_capture_time = f"初次拍摄于{self.first_capture_time}" if self.first_capture_time else ""
@@ -93,7 +98,22 @@ def get_text_info(text_position):
     _, idx = kdtree.query(text_position)
     return TEXT_COORDINATES[list(TEXT_COORDINATES.keys())[idx]]
 
-def extract_images_with_text_info_from_pptx(pptx_path, output_dir, info_mode=False):
+def patch_text(text):
+    '''
+    Patch the text to remove human errors and inconsistencies
+    '''
+    if "错误" in text or "不对" in text:
+        return ""
+    patched_text = text.replace("\n", "; ")
+    patched_text = patched_text.replace("！", "")
+    patched_text = patched_text.replace("!", "")
+    patched_text = patched_text.replace("‘", "'")
+    patched_text = patched_text.replace("的崽子", "'s cub")
+    patched_text = patched_text.replace("的娃", "'s cub")
+    patched_text = patched_text.replace("club", "cub")
+    return patched_text
+
+def extract_images_with_text_info_from_pptx(pptx_path, output_dir, location, info_mode=False):
     prs = Presentation(pptx_path)
     individual_iist = []
     image_list = []
@@ -110,7 +130,7 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, info_mode=Fal
                 # except KeyError:
                 #     if shape.text:
                 #         print("Unknown TEXT_COORDINATES for {} in slide {}".format(shape.text, i))
-                text_info[get_text_info(text_position)] = shape.text.replace("\n", "; ")
+                text_info[get_text_info(text_position)] = patch_text(shape.text)
         print(text_info)
 
         if f"{SPECIES}名称/姓名标签" not in text_info:
@@ -154,7 +174,7 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, info_mode=Fal
 
                     # Get the position of the image
                     image_position = (shape.left, shape.top)
-                    image_individual = IndividualImage(individual, get_image_name_label(image_position), LOCATION)
+                    image_individual = IndividualImage(individual, get_image_name_label(image_position), location)
                     image_list.append(image_individual)
                     # Save the image and write info to metadata
                     # individual_dir = os.path.join(output_dir, individual.name_label)
@@ -176,14 +196,14 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, info_mode=Fal
     if info_mode:
         # write individual info to csv
         individual_df = pd.DataFrame([i.__dict__ for i in individual_iist])
-        output_csv_path = os.path.join(output_dir, f"{LOCATION}-{SPECIES}-individuals.csv")
+        output_csv_path = os.path.join(output_dir, f"{location}-{SPECIES}-individuals.csv")
         individual_df.to_csv(output_csv_path, index=False)
     else:
         # write image info to csv
         individual_df = pd.DataFrame([i.individual.__dict__ for i in image_list])
         image_df = pd.DataFrame([i.__dict__ for i in image_list])
         df = pd.concat([individual_df, image_df], axis=1).drop(columns=["individual"])
-        output_csv_path = os.path.join(output_dir, f"{LOCATION}-{SPECIES}-images.csv")
+        output_csv_path = os.path.join(output_dir, f"{location}-{SPECIES}-images.csv")
         df.to_csv(output_csv_path, index=False)
 
 if __name__ == "__main__":
@@ -191,8 +211,9 @@ if __name__ == "__main__":
     parser.add_argument("pptx_file_path", help="Path to the pptx file")
     parser.add_argument("output_folder_path", help="Path to the output folder")
     parser.add_argument("--info", help="Just output the individual info", action="store_true")
+    parser.add_argument('--location', help='Location name', required=True)
     args = parser.parse_args()
     if args.info:
-        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path, info_mode=True)
+        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path, info_mode=True, location=args.location)
     else:
-        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path)
+        extract_images_with_text_info_from_pptx(args.pptx_file_path, args.output_folder_path, location=args.location)
