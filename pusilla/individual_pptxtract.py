@@ -7,7 +7,7 @@ from exiftool import ExifToolHelper
 import argparse
 import pandas as pd
 
-SPECIES = "雪豹"
+SPECIES = "金钱豹"
 
 TEXT_COORDINATES = {
     (4704845, 136525): f"{SPECIES}名称/姓名标签",
@@ -49,7 +49,7 @@ class Individual():
             if "'s cub" in family_relationship.lower():
                 self.age = "cub"
         elif comment:
-            if "'s cub" in family_comment.lower():
+            if "'s cub" in comment.lower():
                 self.age = "cub"
 
     def get_description(self):
