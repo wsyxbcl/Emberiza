@@ -146,9 +146,9 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, location, inf
             name_label = name_label.strip(" ")
         if "性别" in text_info:
             gender = text_info["性别"]
-            if gender in ["M", "公"]:
+            if gender in ["M", "公", "雄性"]:
                 gender = "雄"
-            if gender in ["F", "母"]:
+            if gender in ["F", "母", "雌性"]:
                 gender = "雌"
         if "初次拍摄年/月" in text_info:
             first_capture_time = text_info["初次拍摄年/月"]
