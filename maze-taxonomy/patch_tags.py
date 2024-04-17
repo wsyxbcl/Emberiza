@@ -1,5 +1,5 @@
 # Patch tags.csv with tagdict and taglist
-# Usage: python patch_tags.py tags.csv -o tags_patched.csv
+# Usage: python patch_tags.py tags.csv -o tags_patched.csv 
 
 import argparse
 import polars as pl
@@ -45,9 +45,6 @@ if __name__ == "__main__":
         elif tag.lower() in (maze_synonym_dict_lower := {k.lower(): v for k, v in maze_synonym_dict.items()}):
             tag_corrected = maze_synonym_dict_lower[tag.lower()]
             maze_synonym_dict[tag] = tag_corrected
-            print(f"SYNONYM CASE INSENSITIVE: {tag} -> {tag_corrected}")
-        elif tag in maze_synonym_dict:
-            tag_corrected = maze_synonym_dict[tag]
             print(f"SYNONYM: {tag} -> {tag_corrected}")
         else:
             print(f"UNKNOWN: {tag}")
