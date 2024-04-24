@@ -23,7 +23,7 @@ def extract_individual_info(yaml_files):
         with open(yaml_file, "r") as f:
             data = yaml.safe_load(f)
         title = data["Title"]
-        print(title)
+        print(f"Processing {title}")
         try:
             description = data['Description']
         except KeyError:
