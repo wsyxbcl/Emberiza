@@ -82,7 +82,10 @@ class IndividualImage():
 
     @property
     def keywords(self):
-        return [self.individual.species, self.individual.name, self.individual.name_label, self.individual.age, self.body_part, self.gender]
+        try:
+            return [self.individual.species, self.individual.name, self.individual.name_label, self.individual.age, self.body_part, self.gender]
+        except AttributeError:
+            return [self.individual.species, self.individual.name, self.individual.name_label, self.individual.age, self.body_part]
 
     @property
     def description(self):
