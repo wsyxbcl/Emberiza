@@ -1,5 +1,5 @@
 # Convert trapper-client generated yaml file to csv
-# Usage: python yaml2csv.py <input_yaml> <output_csv>
+# Usage: python trapper-yaml2csv.py <input_yaml> <output_csv>
 
 import sys
 import yaml
