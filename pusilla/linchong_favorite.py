@@ -4,12 +4,13 @@
 import argparse
 import os
 import shutil
+from pathlib import Path
 
 def mark_favorite(image_dir):
     '''
     create xmp files (favorite) for all images in the directory recursively
     '''
-    xmp_file_path = "./assets/fstop-favorite.xmp"
+    xmp_file_path =  Path(__file__).parent / "assets/fstop-favorite.xmp"
     for root, dirs, files in os.walk(image_dir):
         for file in files:
             if file.endswith(('.jpg', '.jpeg', '.png', '.gif')):
