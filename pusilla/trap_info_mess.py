@@ -74,15 +74,15 @@ if __name__ == '__main__':
             .then(pl.lit("相机位置移动"))
             .when(pl.col("locationSource").eq("其它(在备注中注明)"))
             .then(pl.lit("问题见备注"))
-            .otherwise(pl.lit(""))
+            .otherwise(pl.lit(None))
             .alias("otherIssue1"),
         pl.when(pl.col("otherProblem2").is_not_null())
             .then(pl.lit("其它问题"))
-            .otherwise(pl.lit(""))
+            .otherwise(pl.lit(None))
             .alias("otherIssues"),
         pl.when(pl.col("exifTimeProblem1Start").is_not_null())
             .then(pl.lit("EXIF问题"))
-            .otherwise(pl.lit(""))
+            .otherwise(pl.lit(None))
             .alias("exifIssues"),
         pl.when(pl.col("timestampProblem").eq("有问题"))
             .then(pl.lit("true"))
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             pl.col("exifIssues"),
             pl.col("otherIssue1"),
             pl.col("otherIssues")
-        ], separator=" | ")
+        ], separator=" | ", ignore_nulls=True)
             .alias("deploymentTags"),
         pl.col("deploymentID").alias("locationID"),
     )
