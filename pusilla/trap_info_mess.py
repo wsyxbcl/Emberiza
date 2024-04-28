@@ -9,7 +9,7 @@ if __name__ == '__main__':
     BATCH = 1
 
     filename = Path("trap_info.csv")
-    trap_info_path = Path("/mnt/data/AngSai/batch3")
+    trap_info_path = Path("/mnt/data/sda1")
 
     if BATCH:
         
@@ -84,7 +84,7 @@ if __name__ == '__main__':
             .then(pl.lit("EXIF问题"))
             .otherwise(pl.lit(""))
             .alias("exifIssues"),
-        pl.when(pl.col("timestampProblem").is_not_null())
+        pl.when(pl.col("timestampProblem").eq("有问题"))
             .then(pl.lit("true"))
             .otherwise(pl.lit("false"))
             .alias("timestampIssues"),
