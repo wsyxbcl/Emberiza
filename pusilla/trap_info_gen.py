@@ -40,8 +40,14 @@ TRAP_INFO_HEADER = [
     ["时间跳错2参考年份","exifTimeProblem2Ref"],
 ]
 
-def trap_info_gen(collection_dir):
+def trap_info_gen(collection_dir, force=False):
     workbook = xlsxwriter.Workbook(os.path.join(collection_dir, "trap_info_template.xlsx"))
+    # check if the file already exists
+    if not force:
+        if os.path.exists(os.path.join(collection_dir, "trap_info_template.xlsx")):
+            overwrite = input("File already exists. Overwrite? (y/n): ")
+            if overwrite.lower() != "y":
+                return
     worksheet = workbook.add_worksheet()
     print("Opening "+collection_dir+" as collection")
     num_dir_ignored = 0
@@ -93,7 +99,8 @@ def trap_info_gen(collection_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('dir')
-    parser.add_argument('-p', '--project', action='store_true')
+    parser.add_argument('-p', '--project', action='store_true', help='if the directory is a project directory')
+    parser.add_argument('-f', '--force', action='store_true', help='force overwrite')
     args = parser.parse_args()
     if args.project:
         collection_list = next(os.walk(args.dir))[1]
