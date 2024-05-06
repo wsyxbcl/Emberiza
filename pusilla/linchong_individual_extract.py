@@ -17,19 +17,25 @@ def find_yaml_files(directory):
     return yaml_files
 
 def extract_individual_info(yaml_files):
-    title_list = []
-    individual_list = []
+    individuals = {}
     for yaml_file in yaml_files:
         with open(yaml_file, "r") as f:
             data = yaml.safe_load(f)
         title = data["Title"]
-        print(f"Processing {title}")
+        print(f"Processing {title}")        
         try:
             description = data['Description']
         except KeyError:
             continue
-        if title in title_list:
+        keywords = [keyword.strip() for keyword in data['Details']['Keywords'].split(',')]
+        # remove duplicates and count body parts
+        if title in individuals.keys():
+            for keyword in keywords:
+                if keyword in body_parts_count:
+                    individuals[title][keyword] += 1
             continue
+        else:
+            body_parts_count = {"左侧图": 0, "右侧图": 0, "面部花纹": 0, "尾巴": 0, "前肢花纹": 0, "补充图": 0}
         if len(title.split('-')) == 3:
             location, name, label = title.split('-')
         elif len(title.split('-')) == 2:
@@ -38,9 +44,9 @@ def extract_individual_info(yaml_files):
         else:
             print(f"Invalid title format: {title}")
             continue
-        if "adult" in data['Details']['Keywords']:
+        if "adult" in keywords:
             age = "adult"
-        elif "cub" in data['Details']['Keywords']:
+        elif "cub" in keywords:
             age = "cub"
         if "雪豹" in data['Description']:
             species = "雪豹"
@@ -48,8 +54,11 @@ def extract_individual_info(yaml_files):
             species = "金钱豹"
         else:
             species = ""
-        individual_list.append([title, location, name, label, age, species, description])
-    return individual_list
+        individuals[title] = {"Title": title, "Location": location, "Name": name, "Label": label, "Age": age, "Species": species, "Description": description, **body_parts_count}
+        for keyword in keywords:
+            if keyword in body_parts_count:
+                individuals[title][keyword] += 1
+    return individuals
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract individual info from linchong photoprism sidecar files (yaml)")
@@ -58,7 +67,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     yaml_files = find_yaml_files(args.directory)
-    individual_list = extract_individual_info(yaml_files)
-    df = pd.DataFrame(individual_list, columns=["Title", "Location", "Name", "Label", "Age", "Species", "Description"])
-    df.to_csv(args.output_file, index=False)
+    individuals = extract_individual_info(yaml_files)
+    # df = pd.DataFrame(individual_list, columns=["Title", "Location", "Name", "Label", "Age", "Species", "Description", "左侧图", "右侧图", "面部花纹", "尾巴", "前肢花纹", "补充图"])
+    df = pd.DataFrame(individuals.values())
+    df.to_csv(args.output_file, index=False, encoding="utf-8-sig")
     print(f"Individual info written to {args.output_file}")
