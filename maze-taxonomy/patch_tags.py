@@ -28,11 +28,11 @@ if __name__ == "__main__":
         for v in maze_tagdict[k]:
             maze_synonym_dict[v] = k
 
-    df_tags_csv = pl.read_csv(args.tags).drop_nulls()
+    df_tags_csv = pl.read_csv(args.tags).drop_nulls().with_columns(pl.col("species").alias("species_old"))
     # Analyze tags and add case sensitivity to tagdict
     tags_taglist = df_maze_taglist.select("tag").to_series().to_list()
     tags_tagdict = df_maze_tagdict_concat.select("tag").to_series().to_list()
-    tags_csv = df_tags_csv.select("species").unique().to_series().to_list()
+    tags_csv = df_tags_csv.select("species_old").unique().to_series().to_list()
     for tag in tags_csv:
         if tag in tags_taglist:
             continue
@@ -51,6 +51,6 @@ if __name__ == "__main__":
 
     # Patch tags
     df_tags_csv = df_tags_csv.with_columns(
-        pl.col("species").replace(maze_synonym_dict).alias("tags")
+        pl.col("species_old").replace(maze_synonym_dict).alias("species"),
     )
     df_tags_csv.write_csv(args.output)
