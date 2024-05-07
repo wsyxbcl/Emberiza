@@ -18,8 +18,9 @@ if __name__ == '__main__':
         trap_info_raw = pl.concat(
             [
                 pl.read_excel(f,
+                    infer_schema_length=0,
                     engine_options={"dateformat": "%m/%d/%Y"},
-                    read_options={"skip_rows": 1, "dtypes": dtypes, "infer_schema_length": 0}
+                    read_options={"skip_rows": 1, "dtypes": dtypes}
                 ).with_columns(pl.lit(Path(f).parent.name).alias("collectionName"))
                 for f in trap_infos
             ],
@@ -60,6 +61,7 @@ if __name__ == '__main__':
         )
 
     trap_info_tags = trap_info_cleaned.with_columns( 
+        pl.concat_str([pl.lit("name:"), pl.col("deploymentName")]).alias("deploymentNameTagged"),
         pl.when(pl.col("locationSource").eq("精确GPS"))
             .then(pl.lit("coordinate:GPS"))
             .when(pl.col("locationSource").eq("估计GPS"))
@@ -117,7 +119,8 @@ if __name__ == '__main__':
             pl.col("coordinateSource"),
             pl.col("exifIssues"),
             pl.col("otherIssue1"),
-            pl.col("otherIssues")
+            pl.col("otherIssues"),
+            pl.col("deploymentNameTagged")
         ], separator=" | ", ignore_nulls=True)
             .alias("deploymentTags"),
         pl.col("deploymentID").alias("locationID"),
