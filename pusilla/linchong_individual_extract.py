@@ -15,9 +15,18 @@ def find_yaml_files(directory):
             if file.endswith('.yml'):
                 yaml_files.append(os.path.join(root, file))
     return yaml_files
-
+    
 def extract_individual_info(yaml_files):
     individuals = {}
+    def count_body_part(individual, keywords):
+        if "模糊" in keywords:
+            for keyword in keywords:
+                if keyword in body_parts_count:
+                    individual[keyword+"模糊"] += 1
+        else:
+            for keyword in keywords:
+                if (keyword in body_parts_count) or (keyword in blurred_body_parts_count):
+                    individual[keyword] += 1
     for yaml_file in yaml_files:
         with open(yaml_file, "r") as f:
             data = yaml.safe_load(f)
@@ -27,15 +36,15 @@ def extract_individual_info(yaml_files):
             description = data['Description']
         except KeyError:
             continue
+        # anaylze keywords
         keywords = [keyword.strip() for keyword in data['Details']['Keywords'].split(',')]
         # remove duplicates and count body parts
         if title in individuals.keys():
-            for keyword in keywords:
-                if keyword in body_parts_count:
-                    individuals[title][keyword] += 1
+            count_body_part(individuals[title], keywords)
             continue
         else:
             body_parts_count = {"左侧图": 0, "右侧图": 0, "面部花纹": 0, "尾巴": 0, "前肢花纹": 0, "补充图": 0}
+            blurred_body_parts_count = {"左侧图模糊": 0, "右侧图模糊": 0, "面部花纹模糊": 0, "尾巴模糊": 0, "前肢花纹模糊": 0, "补充图模糊": 0}
         if len(title.split('-')) == 3:
             location, name, label = title.split('-')
         elif len(title.split('-')) == 2:
@@ -54,10 +63,8 @@ def extract_individual_info(yaml_files):
             species = "金钱豹"
         else:
             species = ""
-        individuals[title] = {"Title": title, "Location": location, "Name": name, "Label": label, "Age": age, "Species": species, "Description": description, **body_parts_count}
-        for keyword in keywords:
-            if keyword in body_parts_count:
-                individuals[title][keyword] += 1
+        individuals[title] = {"Title": title, "Location": location, "Name": name, "Label": label, "Age": age, "Species": species, "Description": description, **body_parts_count, **blurred_body_parts_count}
+        count_body_part(individuals[title], keywords)
     return individuals
 
 if __name__ == "__main__":
