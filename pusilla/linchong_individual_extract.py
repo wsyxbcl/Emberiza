@@ -1,5 +1,5 @@
 # Extract individual information from linchong photoprism sidecar files (yaml)
-# Usage: python linchong_individual_extract.py <directory> <output_file>
+# Usage: python linchong_individual_extract.py --favorite <directory> <output_file>
 
 import os
 import csv
@@ -16,7 +16,7 @@ def find_yaml_files(directory):
                 yaml_files.append(os.path.join(root, file))
     return yaml_files
     
-def extract_individual_info(yaml_files):
+def extract_individual_info(yaml_files, favorite_mode):
     individuals = {}
     def count_body_part(individual, keywords):
         if "模糊" in keywords:
@@ -31,7 +31,10 @@ def extract_individual_info(yaml_files):
         with open(yaml_file, "r") as f:
             data = yaml.safe_load(f)
         title = data["Title"]
-        print(f"Processing {title}")        
+        print(f"Processing {title}")
+        if favorite_mode:
+            if "Favorite" not in data:
+                continue
         try:
             description = data['Description']
         except KeyError:
@@ -71,10 +74,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract individual info from linchong photoprism sidecar files (yaml)")
     parser.add_argument('directory')
     parser.add_argument('output_file')
+    parser.add_argument('--favorite-only', help='Only count favorite images', action='store_true')
     args = parser.parse_args()
     
     yaml_files = find_yaml_files(args.directory)
-    individuals = extract_individual_info(yaml_files)
+    individuals = extract_individual_info(yaml_files, favorite_mode=args.favorite_only)
     # df = pd.DataFrame(individual_list, columns=["Title", "Location", "Name", "Label", "Age", "Species", "Description", "左侧图", "右侧图", "面部花纹", "尾巴", "前肢花纹", "补充图"])
     df = pd.DataFrame(individuals.values())
     df.to_csv(args.output_file, index=False, encoding="utf-8-sig")
