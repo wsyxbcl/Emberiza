@@ -26,6 +26,11 @@ def extract_individual_info(yaml_files, favorite_mode):
         else:
             for keyword in keywords:
                 if (keyword in body_parts_count) or (keyword in blurred_body_parts_count):
+                    if (keyword+"模糊") in keywords or (keyword+"错误") in keywords:
+                        # Workaroud for the rescan issue: 
+                        # where keywords are added again from the filename, 
+                        # creating keywords like "左侧图, 左侧图模糊"
+                        continue
                     individual[keyword] += 1
     for yaml_file in yaml_files:
         with open(yaml_file, "r") as f:
@@ -41,6 +46,15 @@ def extract_individual_info(yaml_files, favorite_mode):
             continue
         # anaylze keywords
         keywords = [keyword.strip() for keyword in data['Details']['Keywords'].split(',')]
+
+        # debugging
+        # if "左侧图" in keywords and "右侧图" in keywords:
+        #     print(f"左右不分（x {title}")
+        # if "面部花纹" in keywords and "尾巴" in keywords:
+        #     print(f"面部/尾巴 {title}")
+        # if "右侧图" in keywords and "尾巴" in keywords:
+        #     print(f"右侧/尾巴 {title}")
+
         # remove duplicates and count body parts
         if title in individuals.keys():
             count_body_part(individuals[title], keywords)
