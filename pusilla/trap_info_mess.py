@@ -5,31 +5,23 @@ import polars as pl
 if __name__ == '__main__':
     LATITUDE_PLACEHOLDER = 0
     LONGITUDE_PLACEHOLDER = 0
-    COLLECTION_NAME = "AS202201-202203"
     BATCH = 1
 
-    filename = Path("trap_info.csv")
-    trap_info_path = Path("/mnt/data/sda1")
+    trap_info_path = Path("/home/wsyxbcl/AngSai/batch_202304")
 
-    if BATCH:
-        
-        trap_infos = trap_info_path.glob('*/trap_info.xlsx')
-        dtypes={"latitude": pl.Float32, "longitude": pl.Float32,}
-        trap_info_raw = pl.concat(
-            [
-                pl.read_excel(f,
-                    infer_schema_length=0,
-                    engine_options={"dateformat": "%m/%d/%Y"},
-                    read_options={"skip_rows": 1, "dtypes": dtypes}
-                ).with_columns(pl.lit(Path(f).parent.name).alias("collectionName"))
-                for f in trap_infos
-            ],
-            how="diagonal"
-        )
-    else:
-        trap_info_raw = pl.read_csv(trap_info_path.joinpath(filename),
-            # encoding='GBK',
-            skip_rows=1).with_columns(pl.lit(COLLECTION_NAME).alias("collectionName"))
+    trap_infos = trap_info_path.glob('*/trap_info.xlsx')
+    dtypes={"latitude": pl.Float32, "longitude": pl.Float32,}
+    trap_info_raw = pl.concat(
+        [
+            pl.read_excel(f,
+                infer_schema_length=0,
+                engine_options={"dateformat": "%m/%d/%Y"},
+                read_options={"skip_rows": 1, "dtypes": dtypes}
+            ).with_columns(pl.lit(Path(f).parent.name).alias("collectionName"))
+            for f in trap_infos
+        ],
+        how="diagonal"
+    )
 
     # # Check the datetime format
     # with pl.Config(tbl_rows=-1):
@@ -126,8 +118,7 @@ if __name__ == '__main__':
         pl.col("deploymentID").alias("locationID"),
     )
     print(deployments)
-    if BATCH:
-        deployments.write_csv(trap_info_path.joinpath('deployments.csv'))
-        print("deployment table saved as: ", trap_info_path.joinpath('deployments.csv'))
-    else:
-        deployments.write_csv(Path("./").joinpath(filename.stem+'_deployments.csv'))
+
+    deployments.write_csv(trap_info_path.joinpath('deployments.csv'))
+    print("deployment table saved as: ", trap_info_path.joinpath('deployments.csv'))
+ 
