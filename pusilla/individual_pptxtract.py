@@ -7,7 +7,7 @@ from exiftool import ExifToolHelper
 import argparse
 import pandas as pd
 
-SPECIES = "金钱豹"
+SPECIES = "雪豹"
 
 TEXT_COORDINATES = {
     (4704845, 136525): f"{SPECIES}名称/姓名标签",
@@ -128,11 +128,6 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, location, inf
                 if shape.text == "":
                     continue
                 text_position = (shape.left, shape.top)
-                # try:
-                #     text_info[TEXT_COORDINATES[text_position]] = shape.text
-                # except KeyError:
-                #     if shape.text:
-                #         print("Unknown TEXT_COORDINATES for {} in slide {}".format(shape.text, i))
                 text_info[get_text_info(text_position)] = patch_text(shape.text)
         print(text_info)
 
@@ -200,14 +195,14 @@ def extract_images_with_text_info_from_pptx(pptx_path, output_dir, location, inf
         # write individual info to csv
         individual_df = pd.DataFrame([i.__dict__ for i in individual_iist])
         output_csv_path = os.path.join(output_dir, f"{location}-{SPECIES}-individuals.csv")
-        individual_df.to_csv(output_csv_path, index=False)
+        individual_df.to_csv(output_csv_path, index=False, encoding="utf-8-sig")
     else:
         # write image info to csv
         individual_df = pd.DataFrame([i.individual.__dict__ for i in image_list])
         image_df = pd.DataFrame([i.__dict__ for i in image_list])
         df = pd.concat([individual_df, image_df], axis=1).drop(columns=["individual"])
         output_csv_path = os.path.join(output_dir, f"{location}-{SPECIES}-images.csv")
-        df.to_csv(output_csv_path, index=False)
+        df.to_csv(output_csv_path, index=False, encoding="utf-8-sig")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract individual info from a pptx file")
