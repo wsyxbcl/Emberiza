@@ -50,7 +50,7 @@ for i, scientific_name in enumerate(scientific_names):
     try:
         inat_name_en.append([n['name'] for n in taxon.names if (n['locale'] == 'en')][0])
     except IndexError:
-        print(f"English name not found?")
+        print("English name not found?")
         print(taxon.names)
         inat_name_en.append("")
     inat_conservations.append(str(taxon.conservation_status))

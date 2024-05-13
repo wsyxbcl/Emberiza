@@ -6,9 +6,7 @@
 #       -h, --help: show this help message and exit
 
 import argparse
-from datetime import date, time
 import os
-import csv
 
 import xlsxwriter
 

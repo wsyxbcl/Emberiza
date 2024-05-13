@@ -2,7 +2,6 @@
 # Usage: python linchong_individual_extract.py --favorite <directory> <output_file>
 
 import os
-import csv
 import argparse
 import yaml
 import pandas as pd

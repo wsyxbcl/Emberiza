@@ -1,6 +1,5 @@
 import argparse
 import os
-import itertools
 import shutil
 
 # Flatten directiory with given name in given path

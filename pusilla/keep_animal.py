@@ -1,5 +1,4 @@
 import argparse
-import os
 from shutil import copytree, ignore_patterns
             
 if __name__ == "__main__":
