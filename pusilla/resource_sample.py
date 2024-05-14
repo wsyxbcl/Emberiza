@@ -29,7 +29,7 @@ if USE_CSV:
     SPECIES_RATIO = dict(
         zip(df_species_ratio["species"].to_list(), df_species_ratio["ratio"].to_list())
     )
-df = pl.read_csv(TAGS_CSV_PATH).select(["path", "species"])
+df = pl.read_csv(TAGS_CSV_PATH).select(["path", "species", "individual"])
 samples = []
 for species, ratio in SPECIES_RATIO.items():
     num_resource = int(NUM_SAMPLES * ratio)
@@ -44,4 +44,6 @@ for species, ratio in SPECIES_RATIO.items():
     samples.append(df_species_sample)
 
 df_sample = pl.concat(samples, how="vertical")
+
+print(f"Output to {output_csv_path}")
 df_sample.write_csv(output_csv_path, include_bom=True)
