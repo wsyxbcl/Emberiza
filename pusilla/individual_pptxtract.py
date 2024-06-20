@@ -44,7 +44,7 @@ class Individual:
     ):
         self.species = species
         self.name = name
-        self.name_label = name_label
+        self.name_label = name_label.capitalize()
         self.gender = gender
         self.first_capture_time = first_capture_time
         self.latest_capture_time = latest_capture_time
@@ -58,8 +58,12 @@ class Individual:
         elif family_relationship:
             if "'s cub" in family_relationship.lower():
                 self.age = "cub"
+            if "cub of" in family_relationship.lower():
+                self.age = "cub"
         elif comment:
             if "'s cub" in comment.lower():
+                self.age = "cub"
+            if "cub of" in comment.lower():
                 self.age = "cub"
 
     def get_description(self):
@@ -153,7 +157,9 @@ def patch_text(text):
     patched_text = patched_text.replace("!", "")
     patched_text = patched_text.replace("‘", "'")
     patched_text = patched_text.replace("的崽子", "'s cub")
+    patched_text = patched_text.replace("的崽", "'s cub")
     patched_text = patched_text.replace("的娃", "'s cub")
+    patched_text = patched_text.replace("的孩子", "'s cub")
     patched_text = patched_text.replace("club", "cub")
     return patched_text
 
