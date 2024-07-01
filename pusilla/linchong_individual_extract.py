@@ -99,6 +99,8 @@ def extract_individual_info(yaml_files, favorite_mode):
             species = "雪豹"
         elif "金钱豹" in data["Description"]:
             species = "金钱豹"
+        elif "云豹" in data["Description"]:
+            species = "云豹"
         else:
             species = ""
         individuals[title] = {
