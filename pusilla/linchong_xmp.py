@@ -42,8 +42,30 @@ def gen_xmp_template(favorite, datetime):
     """.format(favorite=favorite_str, datetime=datetime)
     return xmp_template
 
-def update_last_recorded_time(csv_file, image_dir, favorite):
+def find_occurred_deployment(csv_file):
     """
+    find deployments for each individual
+    """
+    df_individual = (
+        pl.read_csv(csv_file).select("path", "individual")
+        .filter(~pl.col("individual").is_in(["Blur", ""]))
+        .filter(~pl.col("individual").str.starts_with("UN"))
+        .filter(~pl.col("individual").str.starts_with("Unknown"))
+        .with_columns(pl.col("individual").str.split("with").list.first())
+    )
+    path_sample = df_individual[0]["path"].to_list()[0]
+    delimeter = "/" if "/" in path_sample else "\\"
+    for i, directory in enumerate(path_sample.split(delimeter)):
+        print(f"{i}: {directory}")
+    deployment_idx = input("Deployment index:")
+    deployment_idx = int(deployment_idx)        
+    df_deployment = df_individual.with_columns(pl.col("path").str.split(delimeter).list.get(deployment_idx).alias("deployment"))
+    df_individual_deployment = df_deployment.group_by("individual").agg(pl.col("deployment"))
+    df_individual_deployment.with_columns(pl.col("deployment").list.unique().list.join(";")).write_csv("individual_deployment.csv", include_bom=True)
+    print("Output to individual_deployment.csv")
+
+def update_last_recorded_time(csv_file, image_dir, favorite):
+    """ 
     read tags.csv and write last_recorded_time to xmp files
     """
     df_individual = (
@@ -51,6 +73,10 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
         .select(pl.col("datetime_original").alias("datetime"), pl.col("individual").alias("label"))
         .drop_nulls()
         .filter(~pl.col("label").is_in(["Blur", ""]))
+        .filter(~pl.col("label").str.starts_with("UN"))
+        .filter(~pl.col("label").str.starts_with("Unknown"))
+        # Temporary fix for "with*cub" issue
+        .with_columns(pl.col("label").str.split("with").list.first())
     )
     df_individual_extremum = (
         df_individual.lazy()
@@ -94,6 +120,8 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
                     f.write(xmp_template)
                 print(f"Updated {xmp_file} with {latest_capture_time}")
         else:
+            if label.startswith("UN") or label.startswith("Unknown") or label.startswith("Cub") or ("Cub of" in label):
+                continue
             print(f"Not in Linchong database, label: {label}")
 
 def remove_xmp(image_dir):
@@ -110,9 +138,9 @@ def remove_xmp(image_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("image_dir")
+    parser.add_argument("--image_dir", dest="image_dir")
     # two subcommands: favorite and rmxmp
-    parser.add_argument("subcommand", choices=["favorite", "rmxmp", 'time_init', 'time_update'])
+    parser.add_argument("subcommand", choices=["favorite", "rmxmp", 'time_init', 'time_update', 'find_deployments'])
     # add another argument for time_init and time_update
     parser.add_argument("--tags_csv", dest="tags_csv")
 
@@ -125,3 +153,5 @@ if __name__ == "__main__":
         update_last_recorded_time(args.tags_csv , args.image_dir, favorite=True)
     elif args.subcommand == "time_update":
         update_last_recorded_time(args.tags_csv, args.image_dir, favorite=False)
+    elif args.subcommand == "find_deployments":
+        find_occurred_deployment(args.tags_csv)
