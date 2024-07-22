@@ -55,6 +55,9 @@ def find_occurred_deployment(csv_file):
         .filter(~pl.col("individual").str.starts_with("UN"))
         .filter(~pl.col("individual").str.starts_with("Unknown"))
         .with_columns(pl.col("individual").str.split("with").list.first())
+        .with_columns(pl.col("individual").str.split("以及").list.first())
+        .with_columns(pl.col("individual").str.split("及").list.first())
+        .with_columns(pl.col("individual").str.strip_suffix(" "))
     )
     path_sample = df_individual[0]["path"].to_list()[0]
     delimeter = "/" if "/" in path_sample else "\\"
