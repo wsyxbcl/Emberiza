@@ -49,7 +49,7 @@ def find_occurred_deployment(csv_file):
     find deployments for each individual
     """
     df_individual = (
-        pl.read_csv(csv_file)
+        pl.read_csv(csv_file, infer_schema_length=0)
         .select("path", "individual")
         .filter(~pl.col("individual").is_in(["Blur", ""]))
         .filter(~pl.col("individual").str.starts_with("UN"))
@@ -78,8 +78,9 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
     """
     read tags.csv and write last_recorded_time to xmp files
     """
+    schema_overrides = {"individual": pl.String}
     df_individual = (
-        pl.read_csv(csv_file, try_parse_dates=True)
+        pl.read_csv(csv_file, try_parse_dates=True, schema_overrides=schema_overrides)
         .select(
             pl.col("datetime_original").alias("datetime"),
             pl.col("individual").alias("label"),
@@ -88,8 +89,13 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
         .filter(~pl.col("label").is_in(["Blur", ""]))
         .filter(~pl.col("label").str.starts_with("UN"))
         .filter(~pl.col("label").str.starts_with("Unknown"))
-        # Temporary fix for "with*cub" issue
+        # Temporary fix for "with*cub" related issue
         .with_columns(pl.col("label").str.split("with").list.first())
+        # Temporary fix for "及" issue
+        .with_columns(pl.col("label").str.split("以及").list.first())
+        .with_columns(pl.col("label").str.split("及").list.first())
+        # trim ending whitespace
+        .with_columns(pl.col("label").str.strip_suffix(" "))
     )
     df_individual_extremum = (
         df_individual.lazy()
@@ -134,12 +140,13 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
                 xmp_template = gen_xmp_template(favorite, latest_capture_time)
                 with open(xmp_file, "w") as f:
                     f.write(xmp_template)
-                print(f"Updated {xmp_file} with {latest_capture_time}")
+                # print(f"Updated {xmp_file} with {latest_capture_time}")
         else:
             if (
                 label.startswith("UN")
                 or label.startswith("Unknown")
                 or label.startswith("Cub")
+                or label.startswith("u")
                 or ("Cub of" in label)
             ):
                 continue
