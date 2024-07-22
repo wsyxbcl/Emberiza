@@ -170,14 +170,14 @@ def remove_xmp(image_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_dir", dest="image_dir")
+    parser.add_argument("--image-dir", dest="image_dir")
     # two subcommands: favorite and rmxmp
     parser.add_argument(
         "subcommand",
         choices=["favorite", "rmxmp", "time_init", "time_update", "find_deployments"],
     )
     # add another argument for time_init and time_update
-    parser.add_argument("--tags_csv", dest="tags_csv")
+    parser.add_argument("--tags-csv", dest="tags_csv")
 
     args = parser.parse_args()
     if args.subcommand == "favorite":
