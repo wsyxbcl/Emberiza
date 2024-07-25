@@ -118,15 +118,11 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
     individual_xmp_dict = {}
     for root, dirs, files in os.walk(image_dir):
         for file in files:
-            if file.endswith((".jpg", ".jpeg", ".png", ".gif")):
-                side_car_file = os.path.join(root, Path(file).stem + ".yml")
-                try:
-                    with open(side_car_file, "r") as f:
-                        data = yaml.safe_load(f)
-                        title = data["Title"]
-                except FileNotFoundError:
-                    # print(f"File {side_car_file} not found")
-                    continue
+            if file.endswith((".yml")):
+                side_car_file = os.path.join(root, file)                            
+                with open(side_car_file, "r") as f:
+                    data = yaml.safe_load(f)
+                    title = data["Title"]
                 if len(title.split("-")) == 3:
                     _, _, label = title.split("-")
                 elif len(title.split("-")) == 2:
