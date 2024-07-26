@@ -29,6 +29,7 @@ def gen_xmp_template(favorite, datetime):
             fstop:favorite="1"/>"""
     else:
         favorite_str = ""
+    # format using iso8601
     xmp_template = """<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
     <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 4.4.0-Exiv2">
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -37,10 +38,9 @@ def gen_xmp_template(favorite, datetime):
         xmlns:photoshop='http://ns.adobe.com/photoshop/1.0/'>
         <photoshop:DateCreated>{datetime}</photoshop:DateCreated>
     </rdf:Description>
-    </rdf:RDF>      
-    </x:xmpmeta>
-    <?xpacket end="w"?>
-    """.format(favorite=favorite_str, datetime=datetime)
+    </rdf:RDF>
+    </x:xmpmeta>\n<?xpacket end="w"?>   
+    """.format(favorite=favorite_str, datetime=datetime.isoformat())
     return xmp_template
 
 
@@ -58,6 +58,7 @@ def find_occurred_deployment(csv_file):
         .with_columns(pl.col("individual").str.split("以及").list.first())
         .with_columns(pl.col("individual").str.split("及").list.first())
         .with_columns(pl.col("individual").str.strip_suffix(" "))
+        # .with_columns(pl.col("individual").str.to_titlecase())
     )
     path_sample = df_individual[0]["path"].to_list()[0]
     delimeter = "/" if "/" in path_sample else "\\"
@@ -77,7 +78,7 @@ def find_occurred_deployment(csv_file):
     print("Output to individual_deployment.csv")
 
 
-def update_last_recorded_time(csv_file, image_dir, favorite):
+def update_last_recorded_time(csv_file, image_dir, favorite, aimed_location):
     """
     read tags.csv and write last_recorded_time to xmp files
     """
@@ -99,6 +100,7 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
         .with_columns(pl.col("label").str.split("及").list.first())
         # trim ending whitespace
         .with_columns(pl.col("label").str.strip_suffix(" "))
+        # .with_columns(pl.col("label").str.to_titlecase())    
     )
     df_individual_extremum = (
         df_individual.lazy()
@@ -111,8 +113,9 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
         .collect()
     )
     df_individual_extremum.write_csv(
-        "individual_capture_extremum.csv", include_bom=True
+        "individual_capture_extremum.csv", include_bom=True, datetime_format="%Y-%m-%d %H:%M:%S"
     )
+    print(df_individual_extremum)
     print("Output to individual_capture_extremum.csv")
 
     individual_xmp_dict = {}
@@ -124,10 +127,13 @@ def update_last_recorded_time(csv_file, image_dir, favorite):
                     data = yaml.safe_load(f)
                     title = data["Title"]
                 if len(title.split("-")) == 3:
-                    _, _, label = title.split("-")
+                    location, _, label = title.split("-")
                 elif len(title.split("-")) == 2:
-                    _, label = title.split("-")
-                xmp_file = os.path.join(root, file + ".xmp")
+                    location, label = title.split("-")
+                # Duplicated names in different locations
+                if location != aimed_location:
+                    continue
+                xmp_file = os.path.join(root, Path(file).stem + ".xmp")
                 if label not in individual_xmp_dict:
                     individual_xmp_dict[label] = [xmp_file]
                 else:
@@ -174,6 +180,7 @@ if __name__ == "__main__":
     )
     # add another argument for time_init and time_update
     parser.add_argument("--tags-csv", dest="tags_csv")
+    parser.add_argument("--location", dest="aimed_location")
 
     args = parser.parse_args()
     if args.subcommand == "favorite":
@@ -181,8 +188,8 @@ if __name__ == "__main__":
     elif args.subcommand == "rmxmp":
         remove_xmp(args.image_dir)
     elif args.subcommand == "time_init":
-        update_last_recorded_time(args.tags_csv, args.image_dir, favorite=True)
+        update_last_recorded_time(args.tags_csv, args.image_dir, favorite=True, aimed_location=args.aimed_location)
     elif args.subcommand == "time_update":
-        update_last_recorded_time(args.tags_csv, args.image_dir, favorite=False)
+        update_last_recorded_time(args.tags_csv, args.image_dir, favorite=False, aimed_location=args.aimed_location)
     elif args.subcommand == "find_deployments":
         find_occurred_deployment(args.tags_csv)
