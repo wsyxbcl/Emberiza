@@ -9,23 +9,40 @@ import pandas as pd
 
 SPECIES = "雪豹"
 
+# for old template
+# TEXT_COORDINATES_OLD = {
+#     (4704845, 136525): f"{SPECIES}名称/姓名标签",
+#     (7979573, 4433110): "性别",
+#     (8610805, 5064524): "初次拍摄年/月",
+#     (10094045, 5708946): "备注",
+#     (7979574, 5705255): "家族关系",
+#     (10585259, 4433110): "拍摄地点",
+#     (11132164, 5071028): "最近捕获年/月",
+# }
+
+# IMG_COORDINATES_OLD = {
+#     (3454708, 1279525): "右侧图",
+#     (9759950, 1450180): "面部花纹",
+#     (130654, 1279084): "左侧图",
+#     (6529770, 1279084): "尾巴",
+#     (2650811, 4213649): "补充图",
+#     (130810, 4213860): "前肢花纹",
+# }
+
 TEXT_COORDINATES = {
     (4704845, 136525): f"{SPECIES}名称/姓名标签",
-    (7979573, 4433110): "性别",
-    (8610805, 5064524): "初次拍摄年/月",
-    (10094045, 5708946): "备注",
-    (7979574, 5705255): "家族关系",
-    (10585259, 4433110): "拍摄地点",
-    (11132164, 5071028): "最近捕获年/月",
+    (7407059, 4454772): "性别",
+    (7406981, 5865981): "备注",
+    (7849998, 5102040): "家族关系",
+    (9855124, 4467969): "年龄",
 }
 
 IMG_COORDINATES = {
-    (3454708, 1279525): "右侧图",
-    (9759950, 1450180): "面部花纹",
-    (130654, 1279084): "左侧图",
-    (6529770, 1279084): "尾巴",
-    (2650811, 4213649): "补充图",
-    (130810, 4213860): "前肢花纹",
+    (4735963, 1298581): "右侧图",
+    (48789, 4167319): "面部花纹",
+    (301, 1251454): "左侧图",
+    (9055996, 1298748): "尾巴",
+    (4027141, 4167188): "前肢花纹",
 }
 
 
@@ -36,54 +53,55 @@ class Individual:
         name,
         name_label,
         gender,
-        first_capture_time,
-        latest_capture_time,
+        # first_capture_time,
+        # latest_capture_time,
         family_relationship,
         comment,
-        appeared_location,
+        # appeared_location,
+        age,
     ):
         self.species = species
         self.name = name
         self.name_label = name_label.capitalize()
         self.gender = gender
-        self.first_capture_time = first_capture_time
-        self.latest_capture_time = latest_capture_time
+        # self.first_capture_time = first_capture_time
+        # self.latest_capture_time = latest_capture_time
         self.family_relationship = family_relationship
         self.comment = comment
-        self.appeared_location = appeared_location
-        self.age = "adult"
+        # self.appeared_location = appeared_location
+        self.age = age
 
-        if "cub" in name_label.lower():
-            self.age = "cub"
-        elif family_relationship:
-            if "'s cub" in family_relationship.lower():
-                self.age = "cub"
-            if "cub of" in family_relationship.lower():
-                self.age = "cub"
-        elif comment:
-            if "'s cub" in comment.lower():
-                self.age = "cub"
-            if "cub of" in comment.lower():
-                self.age = "cub"
+        # if "cub" in name_label.lower():
+        #     self.age = "cub"
+        # elif family_relationship:
+        #     if "'s cub" in family_relationship.lower():
+        #         self.age = "cub"
+        #     if "cub of" in family_relationship.lower():
+        #         self.age = "cub"
+        # elif comment:
+        #     if "'s cub" in comment.lower():
+        #         self.age = "cub"
+        #     if "cub of" in comment.lower():
+        #         self.age = "cub"
 
     def get_description(self):
-        first_capture_time = (
-            f"初次拍摄于{self.first_capture_time}" if self.first_capture_time else ""
-        )
-        latest_capture_time = (
-            f"最近捕获于{self.latest_capture_time}" if self.latest_capture_time else ""
-        )
+        # first_capture_time = (
+        #     f"初次拍摄于{self.first_capture_time}" if self.first_capture_time else ""
+        # )
+        # latest_capture_time = (
+        #     f"最近捕获于{self.latest_capture_time}" if self.latest_capture_time else ""
+        # )
 
         # make a list of all the attributes and drop the empty strings
         description = [
             self.species,
             self.name,
             self.name_label,
-            first_capture_time,
-            latest_capture_time,
+            # first_capture_time,
+            # latest_capture_time,
             self.family_relationship,
             self.comment,
-            self.appeared_location,
+            # self.appeared_location,
         ]
         description = [i for i in description if i]
         description_str = (";".join(description)).replace("\n", "")
@@ -186,9 +204,7 @@ def extract_images_with_text_info_from_pptx(
             continue
 
         # initialize variables for the individual
-        name = gender = first_capture_time = latest_capture_time = (
-            family_relationship
-        ) = comment = appeared_location = None
+        name = gender = age = family_relationship = comment = None
         try:
             name, name_label = text_info[f"{SPECIES}名称/姓名标签"].split("/")
         except ValueError:
@@ -200,27 +216,30 @@ def extract_images_with_text_info_from_pptx(
                 gender = "雄"
             if any(g in ["F", "母", "雌性"] for g in gender):
                 gender = "雌"
-        if "初次拍摄年/月" in text_info:
-            first_capture_time = text_info["初次拍摄年/月"]
-        if "最近捕获年/月" in text_info:
-            latest_capture_time = text_info["最近捕获年/月"]
+        # if "初次拍摄年/月" in text_info:
+        #     first_capture_time = text_info["初次拍摄年/月"]
+        # if "最近捕获年/月" in text_info:
+        #     latest_capture_time = text_info["最近捕获年/月"]
         if "家族关系" in text_info:
             family_relationship = text_info["家族关系"]
         if "备注" in text_info:
             comment = text_info["备注"]
-        if "拍摄地点" in text_info:
-            appeared_location = text_info["拍摄地点"]
+        # if "拍摄地点" in text_info:
+        #     appeared_location = text_info["拍摄地点"]
+        if "年龄" in text_info:
+            age = text_info["年龄"]
 
         individual = Individual(
             SPECIES,
             name,
             name_label,
             gender,
-            first_capture_time,
-            latest_capture_time,
+            # first_capture_time,
+            # latest_capture_time,
             family_relationship,
             comment,
-            appeared_location,
+            # appeared_location,
+            age,
         )
         if info_mode:
             individual_iist.append(individual)
