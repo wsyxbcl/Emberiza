@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     df_tags_csv = (
         pl.read_csv(args.tags)
-        .drop_nulls()
+        # .drop_nulls()
         .with_columns(pl.col("species").alias("species_old"))
     )
     # Analyze tags and add case sensitivity to tagdict
@@ -54,8 +54,13 @@ if __name__ == "__main__":
             tag_corrected = tags_taglist[tags_taglist_lower.index(tag.lower())]
             print(f"CASE INSENSITIVE: {tag} -> {tag_corrected}")
             maze_synonym_dict[tag] = tag_corrected
+        # space or '-' miss match
+        elif tag.replace("-", "").replace(" ", "") in (tags_taglist_strip := [t.replace("-", "").replace(" ", "") for t in tags_taglist]):
+            tag_corrected = tags_taglist[tags_taglist_strip.index(tag.replace("-", "").replace(" ", ""))]
+            print(f"SPACE/HYPHEN: {tag} -> {tag_corrected}")
+            maze_synonym_dict[tag] = tag_corrected
         elif tag.lower() in (
-            maze_synonym_dict_lower := {
+            maze_synonym_dict_lower := {    
                 k.lower(): v for k, v in maze_synonym_dict.items()
             }
         ):
