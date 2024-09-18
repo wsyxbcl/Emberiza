@@ -48,6 +48,7 @@ if __name__ == "__main__":
                 pl.col("rating").replace("", "0"),
             ]
         ).unnest("filename")
+        df_tags = df_tags.drop_nulls(subset=["species"])
         df_taglist = pl.read_csv(TAGLIST).select(
             [pl.col("tag").alias("species"), pl.col("mazeScientificName").alias("scientificName")]
         )
