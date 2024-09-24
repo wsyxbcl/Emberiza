@@ -79,15 +79,14 @@ if __name__ == "__main__":
         .unique(subset=["deployment", "time", "species"], maintain_order=True)
         .collect()
     )
-    df_sorted = (
-        df_cleaned.lazy().sort("time").sort("species").sort("deployment").collect()
-    )
+    df_sorted = df_cleaned.sort("time").sort("species").sort("deployment")
     df_independent = (
         df_sorted.rolling(
             index_column="time",
-            by=["deployment", "species"],
+            group_by=["deployment", "species"],
             period="30m",
-            check_sorted=False,
+            offset="0",
+            closed="left",
         )
         .agg(
             [
