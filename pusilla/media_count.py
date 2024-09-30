@@ -28,7 +28,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     media_count = count_media_files(args.directory)
-    with open(args.output_file, "w", newline="") as csvfile:
+    with open(args.output_file, "w", newline="", encoding="utf-8-sig") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["Directory", "Media Count"])
         for k, v in media_count.items():
